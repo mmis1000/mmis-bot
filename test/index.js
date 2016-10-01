@@ -370,3 +370,78 @@ describe('Request', function() {
     assert.equal('[Tesssssssster] Tesssssssster: test text', request + '')
   })
 })
+describe('Response', function() {
+  const bot = new Bot;
+  const message = new Message({
+    text: 'test text'
+  });
+  const user = new User({
+    uid: 'test@test',
+    id: 'test',
+    tag: 'test',
+    display: 'Tesssssssster'
+  })
+  const fakeSource = {
+    reply: (message)=> {return Promise.resolve(true)},
+    question: (text, options)=> {return Promise.resolve([0, 'test question'])},
+    inputText: (text)=>{return Promise.resolve('test input')}
+  }
+  const response = new Response({
+    message: message,
+    from: user,
+    to: user,
+    source: fakeSource,
+    app: bot
+  })
+  it('should able to get internal data of request by `data` getter', function () {
+    assert.isNotNull(response.data);
+  })
+  // 'from', 'to'
+  it('should forward these propery', function() {
+    assert.isNotNull(response.from);
+    assert.isNotNull(response.to);
+  })
+  it('should reply', function*() {
+    assert.equal(yield response.reply(''), true);
+  })
+  it('should question', function*() {
+    assert.deepEqual(yield response.question('', []), [0, 'test question']);
+  })
+  it('should input', function*() {
+    assert.equal(yield response.input(''), 'test input');
+  })
+})
+describe('User', function() {
+  describe('toString', function(){
+    it('use display if it exist', function(){
+      const user = new User({
+        uid: 'test@test',
+        id: 'test',
+        tag: 'test',
+        display: 'Tesssssssster'
+      })
+      assert(user.toString() === user.display)
+    })
+    it('use uid if display is not exist', function(){
+      const user = new User({
+        uid: 'test@test',
+        id: 'test',
+        tag: 'test'
+      })
+      assert(user.toString() === user.uid)
+    })
+    it('use id if uid is not exist', function(){
+      const user = new User({
+        id: 'test',
+        tag: 'test'
+      })
+      assert(user.toString() === user.id)
+    })
+    it('use tag if id is not exist', function(){
+      const user = new User({
+        tag: 'test'
+      })
+      assert(user.toString() === user.tag)
+    })
+  })
+})
