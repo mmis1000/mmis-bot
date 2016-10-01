@@ -7,6 +7,12 @@ coMocha(mocha)
 var assert = chai.assert;
 
 const Core = require("../").Core;
+const Bot = require("../").Bot;
+const Request = require("../").types.Request;
+const Response = require("../").types.Response;
+const User = require("../").types.User;
+const Message = require("../").types.Message;
+
 describe('Core', function() {
   describe('addHandle', function () {
     it('should add handle in same order', function () {
@@ -307,5 +313,60 @@ describe('Core', function() {
       yield core.handle('test');
       assert.ok(count === 2, 'path not ran properly')
     })
+  })
+})
+describe('Request', function() {
+  const bot = new Bot;
+  const message = new Message({
+    text: 'test text'
+  });
+  const user = new User({
+    uid: 'test@test',
+    id: 'test',
+    tag: 'test',
+    display: 'Tesssssssster'
+  })
+  const fakeSource = {hasPermission: ()=> {return Promise.resolve(true)}}
+  const request = new Request( {
+    isCommand: true,
+    isText: true,
+    message: message,
+    originalArgs: ['test', 'text'],
+    fullArgs: ['test', 'text'],
+    args: ['test', 'text'],
+    from: user,
+    to: user,
+    source: fakeSource,
+    app: bot
+  })
+  it('should able to get text as a property', function() {
+    assert.equal(request.text, message.text)
+  })
+  it('should able to get internal data of request by `data` getter', function () {
+    assert.isNotNull(request.data);
+  })
+  // 'isCommand', 'isText', 'message', 'originalArgs', 'fullArgs', 'args', 'from', 'to'
+  it('should forward these propery', function() {
+    assert.isNotNull(request.isCommand);
+    assert.isNotNull(request.isText);
+    assert.isNotNull(request.message);
+    assert.isNotNull(request.originalArgs);
+    assert.isNotNull(request.fullArgs);
+    assert.isNotNull(request.args);
+    assert.isNotNull(request.from);
+    assert.isNotNull(request.to);
+  })
+  it('should able to get permission level of current request from source if app did\'t handle it', function* (){
+    assert.ok(yield request.hasPermission('global'))
+  })
+  it('should able to get permission level of current request from app', function* (){
+    bot.addHandle('permission', function(req, level, flow) {
+      flow.returnValue = false;
+      flow.terminate();
+    })
+    assert.isNotOk(yield request.hasPermission('global'));
+  })
+  it('should able to make the request to string', function (){
+    assert.equal('[Tesssssssster] Tesssssssster: test text', request + '')
   })
 })
