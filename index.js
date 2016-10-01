@@ -1,7 +1,7 @@
 module.exports = {
   Bot: require("./lib/bot"),
   Core: require("./lib/core"),
-  IrcRouter: require("./lib/routers/irc_router"),
+  IrcClient: require("./lib/clients/irc"),
   utils: require("./lib/utils"),
   Router: require("./lib/router/router"),
   types: {

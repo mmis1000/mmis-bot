@@ -11,10 +11,10 @@ var ircCLient = new IrcCLient({
 ircCLient.bind(bot);
 
 bot.command('help', function* (req, res, flow) {
-  if (req.args.length === 1) {
+  if (req.args.length === 0) {
     return res.reply('this command is used to show help message');
   }
-  req.args.shift()
+  req.fullArgs = req.args;
   flow.help();
 })
 
@@ -39,6 +39,10 @@ bot.command('test', function* (req, res, flow) {
   res.reply('your favorite fruiy is ' + fruit[0]);
 })
 
+bot.command(['a', 'long', 'path'], function* (req, res, flow) {
+  res.reply('it match a long path, with arguments ' + req.args.join(' '));
+})
+
 var Router = require("./lib/router/router");
 var router = new Router();
 bot.use('main', router.middleware);
@@ -57,4 +61,15 @@ router.command('sub3', function* (req, res, flow) {
 
 bot.command('main', function* (req, res, flow) {
   res.reply('does not used, so it fall through');
+})
+
+var router2 = new Router();
+
+bot.use(['long', 'long', 'main'], router2.middleware);
+
+router2.command('sub', function* (req, res, flow) {
+  res.reply('it match a long path, to a router, with arguments ' + req.args.join(' '));
+})
+router2.help('sub', function* (req, res, flow) {
+  res.reply('it match a long path, to a router, with arguments ' + req.args.join(' ') + ' and ask for help');
 })
