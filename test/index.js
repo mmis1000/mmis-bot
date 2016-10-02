@@ -445,3 +445,394 @@ describe('User', function() {
     })
   })
 })
+describe('Bot', function() {
+  const message = new Message({
+    text: 'test text'
+  });
+  const user = new User({
+    uid: 'test@test',
+    id: 'test',
+    tag: 'test',
+    display: 'Tesssssssster'
+  })
+  const fakeSource = {
+    hasPermission: ()=> {return Promise.resolve(true)},
+    reply: (message)=> {return Promise.resolve(true)},
+    question: (text, options)=> {return Promise.resolve([0, 'test question'])},
+    inputText: (text)=>{return Promise.resolve('test input')}
+  }
+  /*
+  const response = new Response({
+    message: message,
+    from: user,
+    to: user,
+    source: fakeSource,
+    app: bot
+  })
+  const request = new Request( {
+    isCommand: true,
+    isText: true,
+    message: message,
+    originalArgs: ['test', 'text'],
+    fullArgs: ['test', 'text'],
+    args: ['test', 'text'],
+    from: user,
+    to: user,
+    source: fakeSource,
+    app: bot
+  })*/
+  describe('addHandles', function() {
+    it('should be able to add raw handle', function() {
+      var bot = new Bot();
+      bot.addHandle('test', function(){})
+      bot.addHandle('test', function*(){})
+    })
+    it('should throw when raw handle isn\'t function', function() {
+      var bot = new Bot();
+      assert.throws(function () {
+        bot.addHandle('test', true)
+      })
+    })
+    it('should has these short cut', function*() {
+      var bot = new Bot();
+      bot.whenGetUserFromUid(function(){});
+      bot.whenMakeRequestToUid(function(){});
+      yield bot.getUserFromUid();
+      yield bot.makeRequestToUid();
+    })
+    it('should be able to prepend raw handle', function() {
+      var bot = new Bot();
+      bot.addHandleBefore('test', function(){})
+      bot.addHandleBefore('test', function*(){})
+    })
+    it('should throw when prepended raw handle isn\'t function', function() {
+      var bot = new Bot();
+      assert.throws(function () {
+        bot.addHandleBefore('test', true)
+      })
+    })
+    it('should be able to add handle for command', function() {
+      var bot = new Bot();
+      bot.command(function(){})
+      bot.command(function*(){})
+      bot.command('test', function(){})
+      bot.command('test', function*(){})
+      bot.command(['test'], function(){})
+      bot.command(['test'], function*(){})
+    })
+    it('should throw when command handle isn\'t function', function() {
+      var bot = new Bot();
+      assert.throws(function () {
+        bot.command('test', true)
+      })
+    })
+    it('should be able to add handle for help', function() {
+      var bot = new Bot();
+      bot.help(function(){})
+      bot.help(function*(){})
+      bot.help('test', function(){})
+      bot.help('test', function*(){})
+      bot.help(['test'], function(){})
+      bot.help(['test'], function*(){})
+    })
+    it('should throw when help handle isn\'t function', function() {
+      var bot = new Bot();
+      assert.throws(function () {
+        bot.help('test', true)
+      })
+    })
+    it('should be able to add handle for use', function() {
+      var bot = new Bot();
+      bot.use('test', function(){})
+      bot.use('test', function*(){})
+    })
+    it('should throw when use handle isn\'t function', function() {
+      var bot = new Bot();
+      assert.throws(function () {
+        bot.use('test', true)
+      })
+    })
+  })
+  describe('handle command', function() {
+    it('should not catch the command when it is not a command', function*() {
+      var bot = new Bot();
+      const request = new Request( {
+        isCommand: true,
+        isText: true,
+        message: message,
+        originalArgs: ['test', 'arg'],
+        fullArgs: ['test', 'arg'],
+        args: ['test', 'arg'],
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      const response = new Response({
+        message: message,
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      var a = 0
+      bot.command('test', function(req, res){
+        assert.deepEqual(req.args, ['arg'])
+        a+=1
+      })
+      bot.command('test', function*(){
+        throw new Error('fail to catch')
+      })
+      yield bot.run('main', request, response);
+      assert.equal(a, 1);
+    })
+    it('should catch the command when path matchs', function*() {
+      var bot = new Bot();
+      const request = new Request( {
+        isCommand: true,
+        isText: true,
+        message: message,
+        originalArgs: ['test', 'arg'],
+        fullArgs: ['test', 'arg'],
+        args: ['test', 'arg'],
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      const response = new Response({
+        message: message,
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      var a = 0
+      bot.command('test', function(req, res){
+        assert.deepEqual(req.args, ['arg'])
+        a+=1
+      })
+      bot.command('test', function*(){
+        throw new Error('fail to catch')
+      })
+      yield bot.run('main', request, response);
+      assert.equal(a, 1);
+    })
+    it('should resume the command when requested', function*() {
+      var bot = new Bot();
+      const request = new Request( {
+        isCommand: true,
+        isText: true,
+        message: message,
+        originalArgs: ['test', 'arg'],
+        fullArgs: ['test', 'arg'],
+        args: ['test', 'arg'],
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      const response = new Response({
+        message: message,
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      var a = 0
+      bot.command('test', function(req, res, flow){
+        assert.deepEqual(req.args, ['arg'])
+        a+=1
+        flow.resume();
+      })
+      bot.command('test', function*(){
+        a+=1
+      })
+      yield bot.run('main', request, response);
+      assert.equal(a, 2);
+    })
+    it('should also catch the command properly when handle is generator', function*() {
+      var bot = new Bot();
+      const request = new Request( {
+        isCommand: true,
+        isText: true,
+        message: message,
+        originalArgs: ['test', 'arg'],
+        fullArgs: ['test', 'arg'],
+        args: ['test', 'arg'],
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      const response = new Response({
+        message: message,
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      var a = 0
+      bot.command('test', function* (req, res, flow){
+        assert.deepEqual(req.args, ['arg'])
+        yield new Promise(function(resolve) {
+          setTimeout(function() {
+            a+=1;
+            resolve();
+          }, 10)
+        });
+      })
+      yield bot.run('main', request, response);
+      assert.equal(a, 1);
+    })
+    it('should not catch the command when it is not a command', function*() {
+      var bot = new Bot();
+      const request = new Request( {
+        isCommand: false,
+        isText: true,
+        message: message,
+        originalArgs: ['test', 'arg'],
+        fullArgs: ['test', 'arg'],
+        args: ['test', 'arg'],
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      const response = new Response({
+        message: message,
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      var a = 0
+      bot.command('test', function(req, res){
+        a++;
+        throw new Error('should not go here')
+      })
+      yield bot.run('main', request, response);
+      assert.equal(a, 0);
+    })
+    it('should not catch the command when it is not a text message', function*() {
+      var bot = new Bot();
+      const request = new Request( {
+        isCommand: true,
+        isText: false,
+        message: message,
+        originalArgs: ['test', 'arg'],
+        fullArgs: ['test', 'arg'],
+        args: ['test', 'arg'],
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      const response = new Response({
+        message: message,
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      var a = 0
+      bot.command('test', function(req, res){
+        a++;
+        throw new Error('should not go here')
+      })
+      yield bot.run('main', request, response);
+      assert.equal(a, 0);
+    })
+    it('should catch the command when long path matchs', function*() {
+      var bot = new Bot();
+      const request = new Request( {
+        isCommand: true,
+        isText: true,
+        message: message,
+        originalArgs: ['test', 'arg'],
+        fullArgs: ['test', 'arg'],
+        args: ['test', 'arg'],
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      const response = new Response({
+        message: message,
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      var a = 0
+      bot.command(function(req, res, flow){
+        assert.deepEqual(req.args, ['test', 'arg'])
+        a+=1;
+        flow.resume();
+      })
+      bot.command('test', function(req, res, flow){
+        assert.deepEqual(req.args, ['arg'])
+        a+=1
+        flow.resume();
+      })
+      bot.command(['test', 'arg'], function(req, res, flow){
+        assert.deepEqual(req.args, [])
+        a+=1
+        flow.resume();
+      })
+      bot.command(['test', 'arg', 'fail'], function*(){
+        throw new Error('fail to catch')
+      })
+      yield bot.run('main', request, response);
+      assert.equal(a, 3);
+    })
+    it('should catch the help when long path matchs', function*() {
+      var bot = new Bot();
+      const request = new Request( {
+        isCommand: true,
+        isText: true,
+        message: message,
+        originalArgs: ['test', 'arg'],
+        fullArgs: ['test', 'arg'],
+        args: ['test', 'arg'],
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      const response = new Response({
+        message: message,
+        from: user,
+        to: user,
+        source: fakeSource,
+        app: bot
+      });
+      var a = 0
+      bot.help(function(req, res, flow){
+        assert.deepEqual(req.args, ['test', 'arg'])
+        a+=1;
+        flow.resume();
+      })
+      bot.help('test', function(req, res, flow){
+        assert.deepEqual(req.args, ['arg'])
+        a+=1
+        flow.resume();
+      })
+      bot.help(['test', 'arg'], function(req, res, flow){
+        assert.deepEqual(req.args, [])
+        a+=1
+        flow.resume();
+      })
+      bot.help(['test', 'fail'], function(req, res, flow){
+        assert.deepEqual(req.args, [])
+        a+=1
+        flow.resume();
+      })
+      bot.help(['test', 'arg', 'fail'], function*(){
+        throw new Error('fail to catch')
+      })
+      yield bot.run('help', request, response);
+      assert.equal(a, 3);
+    })
+  })
+})
